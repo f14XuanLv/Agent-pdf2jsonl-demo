@@ -1,0 +1,97 @@
+{
+  "template_name": "v2_amendment_template",
+  "template_version": "2.0",
+  "description": "用于提取'修正案'或'决定'类型的复合结构法律文件。这类文件通常包含主席令、发布信息、决定正文（修改条款）以及可能的附件说明。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "当文件名或文件标题包含'修正案'、'决定'、'修改'等关键字时，此模板为首选。",
+      "适用于结构为'发布信息' -> '决定正文' -> '附件说明'的文档。",
+      "如果文档主体是单一、连续的法律条文，应使用'v2_full_law_template'。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "hierarchy_pruning",
+        "description": "修正案的条款层级通常较浅（如'一、'、'二、'），根据内容分析移除schema中多余的层级。",
+        "parameter_source": "分析文档结构，确定最大层级深度 max_hierarchy_level。"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "若文件小于6页，建议将整个修正案作为一个单独的任务块（chunk）处理，大于则按每块（3-5页）进行切分。如果包含非常长的附件，可考虑将附件单独划分为一个任务块。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个精确的法律文本提取引擎。你的任务是识别并提取修正案或决定文件中的所有结构化信息单元。\n**特定提取规则**:\n- **结构识别**: 精确识别'主席令'、'发布信息'、'引言'、'修改条款'、'附件'等不同类型的信息单元。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该知识单元在源PDF中开始的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "知识单元的唯一标识符（如 '主席令第二十八号' 或 '一、'）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型",
+                "enum": [
+                  "title",
+                  "presidential_order",
+                  "publication_info",
+                  "preamble",
+                  "clause",
+                  "appendix",
+                  "signature"
+                ],
+                "type": "string"
+              },
+              "hierarchy": {
+                "description": "表示该单元在文档结构中的位置的层级",
+                "type": "object",
+                "properties": {
+                  "p1": {
+                    "type": "string",
+                    "description": "第一层级 (如 '一、')"
+                  },
+                  "p2": {
+                    "type": "string",
+                    "description": "第二层级 (如 '(一)')"
+                  }
+                }
+              },
+              "related_items_str": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "关系列表，格式为 '关系类型:关联引用'"
+              },
+              "content": {
+                "type": "string",
+                "description": "该知识单元的完整、未经修改的原文内容。"
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "content"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}

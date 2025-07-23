@@ -1,0 +1,69 @@
+{
+  "template_name": "v2_generic_template",
+  "template_version": "2.0",
+  "description": "一个通用的、包罗万象的模板，作为无法匹配任何特定模板时的最后防线。它将文档简单地按段落进行切分。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "当没有其他更具体的模板可以匹配文档结构时，使用此模板。",
+      "适用于结构非常不规则或纯文本的文档。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "no_special_rules",
+        "description": "此模板为最基础模板，不应用任何精确化规则。",
+        "parameter_source": "固定规则"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "可按一定的页数（如3-5页）进行任务切分。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个通用的文本提取引擎。你的任务是将文档内容按段落分割，并将每个段落作为独立的知识单元提取。\n**特定提取规则**:\n- **结构识别**: 将每个段落视为一个独立的知识单元。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该段落在源PDF中开始的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "知识单元的唯一标识符（可以是段落的序号或摘要）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型，固定为'paragraph'。",
+                "enum": [
+                  "paragraph"
+                ],
+                "type": "string"
+              },
+              "content": {
+                "type": "string",
+                "description": "该段落的完整、未经修改的原文内容。"
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "content"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}

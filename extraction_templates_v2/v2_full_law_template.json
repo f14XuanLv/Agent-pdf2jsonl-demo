@@ -1,0 +1,114 @@
+{
+  "template_name": "v2_full_law_template",
+  "template_version": "2.0",
+  "description": "用于提取具有复杂层级结构（如编、章、节、条、款、项、目）的完整法律法规。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "适用于包含'第一编'、'第一章'、'第一条'等明确层级标识的文档。",
+      "当文档主体是法律条文时，此模板为首选。",
+      "不适用于只有单一或少量条款的决定或公告。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "hierarchy_pruning",
+        "description": "根据文档实际内容，移除schema中多余的层级定义（p1到p5）。",
+        "parameter_source": "分析文档结构，确定最大层级深度 max_hierarchy_level。"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "建议按'章'或'节'等逻辑边界进行任务切分。如果文档过长且无明显逻辑边界，可按一定的页数（如3-5页）进行切分。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个精确的法律文本提取引擎。你的任务是根据下面提供的JSON Schema，从给定的PDF页面范围和内容边界中提取信息。\n**特定提取规则**:\n- **边界遵从**: 严格在指定的文字描述边界内进行提取，忽略边界外的内容。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该知识单元在源PDF中开始的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "知识单元的唯一标识符（如 '第一条' 或 '（一）'）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型",
+                "enum": [
+                  "法条",
+                  "目录",
+                  "前言",
+                  "附则",
+                  "附件",
+                  "普通段落"
+                ],
+                "type": "string"
+              },
+              "hierarchy": {
+                "description": "表示该单元在文档结构中的位置的层级",
+                "type": "object",
+                "properties": {
+                  "p1": {
+                    "type": "string",
+                    "description": "第一层级 (编)"
+                  },
+                  "p2": {
+                    "type": "string",
+                    "description": "第二层级 (章)"
+                  },
+                  "p3": {
+                    "type": "string",
+                    "description": "第三层级 (节)"
+                  },
+                  "p4": {
+                    "type": "string",
+                    "description": "第四层级 (条)"
+                  },
+                  "p5": {
+                    "type": "string",
+                    "description": "第五层级 (款/项)"
+                  }
+                }
+              },
+              "related_items_str": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "关系列表，格式为 '关系类型:关联引用'"
+              },
+              "content": {
+                "type": "string",
+                "description": "该知识单元的完整、未经修改的原文内容。"
+              },
+              "is_main_clause": {
+                "type": "boolean",
+                "description": "对于条款，此项通常为true。"
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "hierarchy",
+              "content",
+              "is_main_clause"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}

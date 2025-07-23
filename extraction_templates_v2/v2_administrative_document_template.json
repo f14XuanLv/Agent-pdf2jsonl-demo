@@ -1,0 +1,73 @@
+{
+  "template_name": "v2_administrative_document_template",
+  "template_version": "2.0",
+  "description": "用于提取格式较为简单的行政文件，如'批复'、'公告'、'函'等。这类文件通常结构简单，主体为少量段落或条款。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "当文件名或文件标题包含'批复'、'公告'、'函'、'通知'等关键字时，此模板为首选。",
+      "适用于结构简单，无复杂层级或表格的短文件。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "no_special_rules",
+        "description": "此模板结构简单，通常无需特殊精确化处理。",
+        "parameter_source": "固定规则"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "此类文件通常很短，若小于6页，可以将整个文档作为一个单独的任务块（chunk）处理。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个精确的行政公文提取引擎。你的任务是识别并提取文件中的标题、发布信息和正文段落。\n**特定提取规则**:\n- **结构识别**: 将标题、发布信息、每个正文段落都视为独立的知识单元。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该知识单元在源PDF中开始的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "知识单元的唯一标识符（可以是文号或段落摘要）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型",
+                "enum": [
+                  "title",
+                  "publication_info",
+                  "preamble",
+                  "paragraph",
+                  "signature"
+                ],
+                "type": "string"
+              },
+              "content": {
+                "type": "string",
+                "description": "该知识单元的完整、未经修改的原文内容。"
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "content"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "template_name": "v2_table_of_contents_template",
+  "template_version": "2.0",
+  "description": "用于专门提取文档的目录（TOC）。此模板将目录的每一行视为一个独立的条目，并尝试结构化地提取章节标题和对应的页码。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "当文档中包含明确的、跨越多行的'目录'或'目次'部分时，应使用此模板。",
+      "适用于需要将目录本身作为结构化数据提取的场景。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "no_special_rules",
+        "description": "目录结构相对固定，无需特殊精确化处理。",
+        "parameter_source": "固定规则"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "应将整个目录部分划定为一个单独的任务块（chunk），以确保完整性。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个精确的目录提取引擎。你的任务是识别文件中的目录部分，并将其每一行转换为一个独立的、结构化的JSON对象。\n**特定提取规则**:\n- **结构化提取**: 对于每一行，将其分解为'章节/条款标题'和'页码'。将这些信息填充到 `toc_entry` 字段中。\n- **忽略非目录行**: 只处理看起来像目录条目的行，忽略空白行或页眉页脚。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该目录条目在源PDF中所在的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "目录条目的唯一标识符（通常是章节编号，如'第一编'）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型，固定为'toc_entry'。",
+                "enum": [
+                  "toc_entry"
+                ],
+                "type": "string"
+              },
+              "content": {
+                "type": "string",
+                "description": "该目录条目的完整原文，包括标题和页码。"
+              },
+              "toc_entry": {
+                "type": "object",
+                "description": "用于存储结构化的目录条目数据。",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "章节或条款的标题"
+                  },
+                  "page": {
+                    "type": "string",
+                    "description": "对应的起始页码（以字符串形式，因为可能包含非数字字符）"
+                  }
+                },
+                "required": ["title", "page"]
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "content",
+              "toc_entry"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}

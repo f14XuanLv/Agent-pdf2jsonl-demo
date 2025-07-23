@@ -1,0 +1,95 @@
+{
+  "template_name": "v2_judicial_interpretation_template",
+  "template_version": "2.0",
+  "description": "用于提取不含表格的司法解释、规定、公告等。核心是按'第X条'、'一、'或数字编号的条款进行划分。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "适用于内容主体由带编号的条款构成的司法解释、规定、批复、公告等文件。",
+      "当文件不包含表格，且不是完整的法律或修正案时，此为通用首选模板。",
+      "如果文件中包含表格，应使用'v2_table_interpretation_template'。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "hierarchy_pruning",
+        "description": "根据文档实际内容，移除schema中多余的层级定义。",
+        "parameter_source": "分析文档结构，确定最大层级深度 max_hierarchy_level。"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "可按逻辑条款进行任务切分，注意单块范围不要超过6页。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个精确的法律文本提取引擎。你的任务是识别并提取司法解释文件中的所有结构化信息单元。\n**特定提取规则**:\n- **结构识别**: 将每个带编号的条款（如'第一条'）以及文件头部的发布信息等都视为独立的知识单元。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该知识单元在源PDF中开始的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "知识单元的唯一标识符（如 '第一条' 或 '法释〔2022〕1号'）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型",
+                "enum": [
+                  "title",
+                  "publication_info",
+                  "preamble",
+                  "clause",
+                  "heading"
+                ],
+                "type": "string"
+              },
+              "hierarchy": {
+                "description": "表示该单元在文档结构中的位置的层级",
+                "type": "object",
+                "properties": {
+                  "p1": {
+                    "type": "string",
+                    "description": "第一层级 (如 '一、')"
+                  },
+                  "p2": {
+                    "type": "string",
+                    "description": "第二层级 (如 '(一)')"
+                  }
+                }
+              },
+              "related_items_str": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "关系列表，格式为 '关系类型:关联引用'"
+              },
+              "content": {
+                "type": "string",
+                "description": "该知识单元的完整、未经修改的原文内容。"
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "content"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}

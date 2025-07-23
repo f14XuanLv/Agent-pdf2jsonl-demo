@@ -1,0 +1,72 @@
+{
+  "template_name": "v2_international_treaty_template",
+  "template_version": "2.0",
+  "description": "用于提取国际条约。这类文件通常包含引言、按'条'划分的正文，以及末尾的签署信息。",
+  "planner_v1_config": {
+    "applicability_rules": [
+      "当文件名或文件标题包含'条约'、'协定'、'公约'等关键字时，此模板为首选。",
+      "适用于结构为'引言' -> '条款' -> '签署信息'的文档。"
+    ],
+    "precisioning_rules": [
+      {
+        "rule_name": "no_special_rules",
+        "description": "此模板结构相对固定，通常无需特殊精确化处理。",
+        "parameter_source": "固定规则"
+      }
+    ]
+  },
+  "planner_v2_config": {
+    "chunking_strategy_hint": "如果条约内容小于6页，可以将整个条约作为一个单独的任务块（chunk）处理，以保证上下文的完整性，如果大于6页，可按每个任务块 3-5 页进行拆分。"
+  },
+  "extractor_config": {
+    "extraction_prompt": "你是一个精确的国际条约提取引擎。你的任务是识别并提取文件中的引言、条款和签署信息。\n**特定提取规则**:\n- **结构识别**: 将引言、每个条款（如'第一条'）、以及末尾的签署部分都视为独立的知识单元。",
+    "extraction_schema": {
+      "type": "object",
+      "properties": {
+        "knowledge_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page_number": {
+                "type": "integer",
+                "description": "该知识单元在源PDF中开始的页码"
+              },
+              "item_id": {
+                "type": "string",
+                "description": "知识单元的唯一标识符（如 '第一条' 或 '签署信息'）"
+              },
+              "item_type": {
+                "description": "知识单元的语义类型",
+                "enum": [
+                  "title",
+                  "preamble",
+                  "clause",
+                  "signature"
+                ],
+                "type": "string"
+              },
+              "content": {
+                "type": "string",
+                "description": "该知识单元的完整、未经修改的原文内容。"
+              }
+            },
+            "required": [
+              "page_number",
+              "item_id",
+              "item_type",
+              "content"
+            ]
+          }
+        },
+        "status": {
+            "type": "string",
+            "description": "用于动态容错的状态标识。正常完成时应忽略此字段，仅在预测输出超限时设置为 'INCOMPLETE_OUTPUT_MAX_TOKENS'。"
+        }
+      },
+      "required": [
+        "knowledge_units"
+      ]
+    }
+  }
+}
