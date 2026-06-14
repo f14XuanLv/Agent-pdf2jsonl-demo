@@ -53,3 +53,9 @@
     python agent_v2.py
     ```
 5.  **查看结果**: 处理完成后，结构化的数据将以 `.jsonl` 格式保存在 `[pdf_directory_name]_jsonl/` 目录中。
+
+
+## 示例输出
+![alt text](demo.png)
+
+更多输出示例请参见 [输出样例](/输出样例) 目录。
